@@ -133,6 +133,7 @@ namespace format {
             }
         
         public:
+            // Constructors
             Table() : headers_(), table_values_(), row_separator_(), column_separator_(), column_space_(), borders_() {}
             Table(const std::vector<std::string>& headers, const std::vector<std::vector<std::string>>& table_values, int space = 1)
             : headers_(headers), table_values_(table_values), row_separator_(), column_separator_(), column_space_(space), borders_() {}
@@ -144,6 +145,7 @@ namespace format {
                   char column_separator, int space, bool borders)
             : headers_(headers), table_values_(table_values), row_separator_(row_separator), column_separator_(column_separator), column_space_(space), borders_(borders) {}
 
+            // Setters
             void setHeaders(const std::vector<std::string>& headers)
             {
                 headers_ = headers;
@@ -172,6 +174,52 @@ namespace format {
             void setBorders(bool borders)
             {
                 borders_ = borders;
+            }
+
+            // Modifiers
+            void appendTableValue(const std::vector<std::string>& value)
+            {
+                table_values_.push_back(value);
+            }
+
+            void appendTableValue(const std::vector<std::vector<std::string>>& values)
+            {
+                table_values_.insert(table_values_.end(), values.begin(), values.end());
+            }
+
+            void popTableValue()
+            {
+                table_values_.pop_back();
+            }
+
+            void insertTableValueAt(const std::vector<std::string>& value, int index)
+            {
+                table_values_.insert(table_values_.begin() + index, value);
+            }
+
+            void insertTableValueAt(const std::vector<std::vector<std::string>>& values, int index)
+            {
+                table_values_.insert(table_values_.begin() + index, values.begin(), values.end());
+            }
+
+            std::vector<std::string>& operator[](int index)
+            {
+                if(index == 0) {
+                    return headers_;
+                }
+
+                return table_values_[index - 1];
+            }
+
+            // Getters
+            std::vector<std::string> getHeaders() const
+            {
+                return headers_;
+            }
+
+            std::vector<std::vector<std::string>> getTableValues() const
+            {
+                return table_values_;
             }
 
             std::string getString(const std::string& column_border, const std::string& row_border, int left_margin) const
