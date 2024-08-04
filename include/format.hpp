@@ -10,6 +10,10 @@ namespace format {
         private:
             std::vector<std::string> headers_;
             std::vector<std::vector<std::string>> table_values_;
+            char row_separator_;
+            char column_separator_;
+            int column_space_;
+            bool borders_;
 
             std::vector<std::vector<std::string>> cleanTableValues(const std::vector<std::vector<std::string>>& table_values) const
             {
@@ -129,11 +133,46 @@ namespace format {
             }
         
         public:
-            Table() : headers_(), table_values_() {}
-            Table(const std::vector<std::string>& headers, const std::vector<std::vector<std::string>>& table_values)
-            : headers_(headers), table_values_(table_values) {}
+            Table() : headers_(), table_values_(), row_separator_(), column_separator_(), column_space_(), borders_() {}
+            Table(const std::vector<std::string>& headers, const std::vector<std::vector<std::string>>& table_values, int space = 1)
+            : headers_(headers), table_values_(table_values), row_separator_(), column_separator_(), column_space_(space), borders_() {}
 
-            Table(const std::vector<std::vector<std::string>>& table_values) : headers_(), table_values_(table_values) {}
+            Table(const std::vector<std::vector<std::string>>& table_values, int space = 1) : headers_(), table_values_(table_values),
+              row_separator_(), column_separator_(), column_space_(space), borders_() {}
+            
+            Table(const std::vector<std::string>& headers, const std::vector<std::vector<std::string>>& table_values, char row_separator,
+                  char column_separator, int space, bool borders)
+            : headers_(headers), table_values_(table_values), row_separator_(row_separator), column_separator_(column_separator), column_space_(space), borders_(borders) {}
+
+            void setHeaders(const std::vector<std::string>& headers)
+            {
+                headers_ = headers;
+            }
+
+            void setTableValues(const std::vector<std::vector<std::string>>& table_values)
+            {
+                table_values_ = table_values;
+            }
+
+            void setRowSeparator(char row_separator_char)
+            {
+                row_separator_ = row_separator_char;
+            }
+
+            void setColumnSeparator(char column_separator_char)
+            {
+                column_separator_ = column_separator_char;
+            }
+
+            void setColumnSpace(int space)
+            {
+                column_space_ = space;
+            }
+
+            void setBorders(bool borders)
+            {
+                borders_ = borders;
+            }
 
             std::string getString(const std::string& column_border, const std::string& row_border, int left_margin) const
             {
@@ -187,181 +226,4 @@ namespace format {
                 std::cout << getString(column_border, row_border, left_margin);
             }
     };
-
-    namespace _private_ {
-        std::vector<std::vector<std::string>> cleanTableValues(const std::vector<std::vector<std::string>>& table_values);
-        std::vector<int> maxColumnWidths(const std::vector<std::string>& headers, const std::vector<std::vector<std::string>>& table_values);
-        std::vector<int> maxColumnWidths(const std::vector<std::vector<std::string>>& table_values);
-    }
-
-    inline std::string table(const std::vector<std::string>& headers, const std::vector<std::vector<std::string>>& table_values,
-                             const std::string& column_border, const std::string& row_border, const std::string& left_margin)
-    {
-        std::string table;
-        std::vector<std::vector<std::string>> cleaned_table_values = _private_::cleanTableValues(table_values);
-        std::vector<int> col_widths = _private_::maxColumnWidths(headers, cleaned_table_values);
-
-        for(int i = 0; i < headers.size(); i++) {
-            table += headers[i];
-            if(i < headers.size()-1) {
-                table += std::string(col_widths[i] - headers[i].size(), ' ') + column_border;
-            }
-        }
-
-        if(!headers.empty()) {
-            table += '\n';
-        }
-
-        if(cleaned_table_values.empty()) {
-            return table;
-        }
-
-        // Subtract the max width with the size of the string to get the correct amount of space
-        for(int i = 0; i < cleaned_table_values.size(); i++) {
-            for(int j = 0; j < cleaned_table_values[i].size(); j++) {
-                std::string value = cleaned_table_values[i][j];
-                table += value;
-                if(j < cleaned_table_values[i].size()-1) {
-                    table += std::string(col_widths[j] - value.size(), ' ') + column_border;
-                }
-            }
-            table += '\n';
-        }
-
-        return table;
-    }
-
-    inline std::string table(const std::vector<std::string>& headers, const std::vector<std::vector<std::string>>& table_values,
-                             int space = 1)
-    {
-        if(space < 0) {
-            space = 0;
-        }
-
-        return table(headers, table_values, std::string(space, ' '), "", "");
-    }
-
-    inline std::string table(const std::vector<std::vector<std::string>>& table_values, int space = 1) 
-    {
-        return table({}, table_values, space);
-    }
-
-    namespace _private_ {
-        inline std::vector<std::vector<std::string>> cleanTableValues(const std::vector<std::vector<std::string>>& table_values)
-        {
-            /*
-                Add new rows based on the max number of endlines found in the row
-                Eg:
-                {
-                    {"Apple", "Banana\nNana\nBan", "Cherry\nHenry"},
-                    {"Grapes", "Orange", "Pineapple"}
-                }
-                to
-                {
-                    {"", "", ""},
-                    {"", "", ""},
-                    {"", "", ""},
-                    {"", "", ""}
-                }
-
-                In this case, the max number of '\n' in the first row is 2. 
-                So we add 2 more rows.
-            */
-            std::vector<std::vector<std::string>> cleaned_table_values(table_values.size(), std::vector<std::string>(table_values[0].size(), ""));
-            for(int i = 0; i < table_values.size(); i++) {
-                int max_endlines = 0;
-                for(int j = 0; j < table_values[i].size(); j++) {
-                    int endlines = 0;
-
-                    for(int k = 0; k < table_values[i][j].size(); k++) {
-                        char ch = table_values[i][j][k];
-
-                        if(ch == '\n') {
-                            endlines++;
-                        }
-                    }
-
-                    max_endlines = std::max(max_endlines, endlines);
-                }
-
-                for(int j = 0; j < max_endlines; j++) {
-                    cleaned_table_values.push_back(std::vector<std::string>(table_values[i].size(), ""));
-                }
-            }
-
-            /*
-                Put the strings next to the newline to the next row.
-                Eg:
-                {
-                    {"Apple", "Banana\nNana\nBan", "Cherry\nHenry"},
-                    {"Grapes", "Orange", "Pineapple"}
-                }
-                to
-                {
-                    {"Apple", "Banana", "Cherry"},
-                    {"", "Nana", "Henry"},
-                    {"", "Ban", ""},
-                    {"Grapes", "Orange", "Pineapple"}
-                }
-            */
-            int temp_i = 0;
-            for(int i = 0; i < table_values.size(); i++) {
-                int max_endlines = 0;
-
-                for(int j = 0; j < table_values[i].size(); j++) {
-                    int endlines = 0;
-
-                    for(int k = 0; k < table_values[i][j].size(); k++) {
-                        char ch = table_values[i][j][k];
-
-                        if(ch == '\n') {
-                            endlines++;
-                            continue;
-                        }
-
-                        cleaned_table_values[temp_i + endlines][j].push_back(ch);
-                    }
-
-                    max_endlines = std::max(max_endlines, endlines);
-                }
-
-                temp_i += max_endlines + 1;
-            }
-
-            return cleaned_table_values;
-        }
-
-        inline std::vector<int> maxColumnWidths(const std::vector<std::string>& headers, const std::vector<std::vector<std::string>>& table_values)
-        {
-            // Determine the maximum width for all rows
-            std::vector<int> col_widths;
-
-            if(!headers.empty()) {
-                col_widths = std::vector<int>(headers.size(), 0);
-            } else if(!table_values.empty()) {
-                col_widths = std::vector<int>(table_values[0].size(), 0);
-            } else {
-                return col_widths;
-            }
-
-            std::vector<std::vector<std::string>> combined;
-            combined.push_back(headers);
-            combined.insert(combined.end(), table_values.begin(), table_values.end());
-
-            for(int i = 0; i < combined.size(); i++) {
-                for(int j = 0; j < combined[i].size(); j++) {
-                    if(combined[i][j].size() > col_widths[j]) {
-                        col_widths[j] = combined[i][j].size();
-                    }
-                }
-            }
-
-            return col_widths;
-        }
-
-        inline std::vector<int> maxColumnWidths(const std::vector<std::vector<std::string>>& table_values)
-        {
-            return maxColumnWidths({}, table_values);
-        }
-    }
 }
