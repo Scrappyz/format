@@ -8,12 +8,10 @@ namespace format {
 
     class Table {
         private:
-            std::vector<std::string> headers_;
-            std::vector<std::vector<std::string>> table_values_;
+            std::vector<std::vector<std::string>> table_;
             char row_separator_;
             char column_separator_;
             int column_space_;
-            bool borders_;
 
             std::vector<std::vector<std::string>> cleanTableValues(const std::vector<std::vector<std::string>>& table_values) const
             {
@@ -134,26 +132,18 @@ namespace format {
         
         public:
             // Constructors
-            Table() : headers_(), table_values_(), row_separator_(), column_separator_(), column_space_(), borders_() {}
-            Table(const std::vector<std::string>& headers, const std::vector<std::vector<std::string>>& table_values, int space = 1)
-            : headers_(headers), table_values_(table_values), row_separator_(), column_separator_(), column_space_(space), borders_() {}
-
-            Table(const std::vector<std::vector<std::string>>& table_values, int space = 1) : headers_(), table_values_(table_values),
-              row_separator_(), column_separator_(), column_space_(space), borders_() {}
+            Table() : table_(), row_separator_(), column_separator_(), column_space_() {}
+            Table(const std::vector<std::vector<std::string>>& table_values, int space = 1) : table_(table_values),
+              row_separator_(), column_separator_(), column_space_(space) {}
             
-            Table(const std::vector<std::string>& headers, const std::vector<std::vector<std::string>>& table_values, char row_separator,
-                  char column_separator, int space, bool borders)
-            : headers_(headers), table_values_(table_values), row_separator_(row_separator), column_separator_(column_separator), column_space_(space), borders_(borders) {}
+            Table(const std::vector<std::vector<std::string>>& table_values, char row_separator,
+                  char column_separator, int space)
+            : table_(table_values), row_separator_(row_separator), column_separator_(column_separator), column_space_(space) {}
 
             // Setters
-            void setHeaders(const std::vector<std::string>& headers)
-            {
-                headers_ = headers;
-            }
-
             void setTableValues(const std::vector<std::vector<std::string>>& table_values)
             {
-                table_values_ = table_values;
+                table_ = table_values;
             }
 
             void setRowSeparator(char row_separator_char)
@@ -171,107 +161,95 @@ namespace format {
                 column_space_ = space;
             }
 
-            void setBorders(bool borders)
-            {
-                borders_ = borders;
-            }
-
             // Modifiers
             void appendTableValue(const std::vector<std::string>& value)
             {
-                table_values_.push_back(value);
+                table_.push_back(value);
             }
 
             void appendTableValue(const std::vector<std::vector<std::string>>& values)
             {
-                table_values_.insert(table_values_.end(), values.begin(), values.end());
+                table_.insert(table_.end(), values.begin(), values.end());
             }
 
             void popTableValue()
             {
-                table_values_.pop_back();
+                table_.pop_back();
             }
 
             void insertTableValueAt(const std::vector<std::string>& value, int index)
             {
-                table_values_.insert(table_values_.begin() + index, value);
+                table_.insert(table_.begin() + index, value);
             }
 
             void insertTableValueAt(const std::vector<std::vector<std::string>>& values, int index)
             {
-                table_values_.insert(table_values_.begin() + index, values.begin(), values.end());
+                table_.insert(table_.begin() + index, values.begin(), values.end());
             }
 
             std::vector<std::string>& operator[](int index)
             {
-                if(index == 0) {
-                    return headers_;
-                }
-
-                return table_values_[index - 1];
+                return table_[index];
             }
 
             // Getters
-            std::vector<std::string> getHeaders() const
+            std::vector<std::vector<std::string>> getTable() const
             {
-                return headers_;
+                return table_;
             }
 
-            std::vector<std::vector<std::string>> getTableValues() const
+            std::string toString() const
             {
-                return table_values_;
-            }
-
-            std::string toString(const std::string& column_border, const std::string& row_border, int left_margin) const
-            {
-                std::string table;
-                std::vector<std::vector<std::string>> cleaned_table_values = cleanTableValues(table_values_);
-                std::vector<int> col_widths = maxColumnWidths(headers_, cleaned_table_values);
-
-                char row_char = row_border.empty() ? '\0' : row_border[0];
-
-                for(int i = 0; i < headers_.size(); i++) {
-                    table += headers_[i];
-                    if(i < headers_.size()-1) {
-                        table += std::string(col_widths[i] - headers_[i].size(), ' ') + column_border;
-                    }
-                }
-
-                if(!headers_.empty()) {
-                    table += '\n';
-                    for(int i = 0; i < col_widths.size(); i++) {
-                        table += std::string(col_widths[i], row_char);
-                        if(i < col_widths.size()-1) {
-                            table += column_border;
-                        }
-                    }
-                    table += '\n';
-                }
+                std::string table_str;
+                std::vector<std::vector<std::string>> cleaned_table_values = cleanTableValues(table_);
+                std::vector<int> col_widths = maxColumnWidths(cleaned_table_values);
 
                 if(cleaned_table_values.empty()) {
-                    return table;
+                    return table_str;
+                }
+
+                std::string column_sep = std::string(column_space_, ' ');
+                if(column_separator_ != '\0') {
+                    if(column_sep.size() == 1) {
+                        column_sep[0] = column_separator_;
+                    } else {
+                        column_sep[column_sep.size() / 2] = column_separator_;
+                    }
                 }
 
                 // Subtract the max width with the size of the string to get the correct amount of space
                 for(int i = 0; i < cleaned_table_values.size(); i++) {
                     for(int j = 0; j < cleaned_table_values[i].size(); j++) {
                         std::string value = cleaned_table_values[i][j];
-                        table += value;
+                        table_str.append(value);
                         if(j < cleaned_table_values[i].size()-1) {
-                            table += std::string(col_widths[j] - value.size(), ' ') + column_border;
+                            table_str.append(std::string(col_widths[j] - value.size(), ' '));
+                            table_str.append(column_sep);
                         }
                     }
-                    table += '\n';
 
-                    
+                    table_str.push_back('\n');
+
+                    if(row_separator_ == '\0' || i > 0) {
+                        continue;
+                    }
+
+                    for(int j = 0; j < col_widths.size(); j++) {
+                        table_str.append(std::string(col_widths[j], row_separator_));
+                        if(j < col_widths.size()-1) {
+                            table_str.append(column_sep);
+                        }
+                    }
+
+                    table_str.push_back('\n');
                 }
 
-                return table;
+                return table_str;
             }
 
-            void print(const std::string& column_border, const std::string& row_border, int left_margin) const
+            void print() const
             {
-                std::cout << toString(column_border, row_border, left_margin);
+                std::cout << toString();
             }
     };
 }
