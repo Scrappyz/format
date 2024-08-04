@@ -222,7 +222,7 @@ namespace format {
                 return table_values_;
             }
 
-            std::string getString(const std::string& column_border, const std::string& row_border, int left_margin) const
+            std::string toString(const std::string& column_border, const std::string& row_border, int left_margin) const
             {
                 std::string table;
                 std::vector<std::vector<std::string>> cleaned_table_values = cleanTableValues(table_values_);
@@ -271,7 +271,7 @@ namespace format {
 
             void print(const std::string& column_border, const std::string& row_border, int left_margin) const
             {
-                std::cout << getString(column_border, row_border, left_margin);
+                std::cout << toString(column_border, row_border, left_margin);
             }
     };
 }
